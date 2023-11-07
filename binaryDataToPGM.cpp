@@ -67,7 +67,13 @@ int main(int nargs, char **args) {
    int nacross=width/reducefactor;
    int ndown  =height/reducefactor;
 
+   int kernelsize=reducefactor*reducefactor;
+
+   double kernelupsize=256.0/kernelsize;
+   double kerneldownsize=kernelsize/256.0;
+
    unsigned int * readbuffer= (unsigned int *)malloc(sizeof(int)*width*reducefactor);
+   unsigned int * midbuffer = (unsigned int *)malloc(nacross*sizeof(int));
    unsigned char* outbuffer = (unsigned char*)malloc(nacross*sizeof(char));
 
    if (skipheader>0) fseek(stdin,skipheader,SEEK_CUR);
@@ -77,13 +83,22 @@ int main(int nargs, char **args) {
    for (int j=0; j<ndown; j++)  {
       fread(readbuffer,sizeof(int),width*reducefactor,stdin);
        for (int i=0; i<nacross; i++) {
-           outbuffer[i]=0;
+           midbuffer[i]=0;
            for (int py=0; py<reducefactor; py++) {
                int index=i*reducefactor+py*width;
                for (int px=0; px<reducefactor; px++,index++) {
                    if (readbuffer[index]>1)
-                      outbuffer[i]++;
+                      midbuffer[i]++;
                }
+           }
+           if (kernelsize==256)
+             outbuffer[i]=(unsigned char)(midbuffer[i]>255?255:midbuffer[i]);
+           else if (kernelsize<256) {
+             midbuffer[i]=(unsigned int)(midbuffer[i]*kernelupsize);
+             outbuffer[i]=(unsigned char)(midbuffer[i]>255?255:midbuffer[i]);
+           } else {
+             midbuffer[i]=(unsigned int)( midbuffer[i]*256/kernelsize);
+             outbuffer[i]=(unsigned char)(midbuffer[i]>255?255:midbuffer[i]);
            }
        }
        fwrite(outbuffer,1,nacross,stdout);
