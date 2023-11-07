@@ -13,10 +13,11 @@ const int REDUCE_MODE_AVERAGE = 2;
 int width =-1;
 int height=-1;
 int reducefactor=16;
-
 int skipheader=-1;
 
 int reduceMode= REDUCE_MODE_IGNORE;
+
+bool quietmode=false;
 
 int main(int nargs, char **args) {
 
@@ -37,6 +38,8 @@ int main(int nargs, char **args) {
      } else if (strequals(args[narg],"-jumptohalf")) {
        if (skipheader<0) skipheader=0;
        skipheader+=width*(height/2)*sizeof(int);
+     } else if (strequals(args[narg],"-quiet")) {
+       quietmode=true;
      } else if (strequals(args[narg],"-band")) {
        int band=0;
        sscanf(args[++narg],"%i",&band);
@@ -47,16 +50,19 @@ int main(int nargs, char **args) {
      } else if (height<0) {
        sscanf(args[narg],"%i",&height);
      } else  {
-       warns("unrecognized parameter [%s]",args[narg]);
+       if (!quietmode)
+         warns("unrecognized parameter [%s]",args[narg]);
        return 0;
      }
    }
 
    if (width%reducefactor!=0)
-     fprintf(stderr,"Warning: width does not reduce evenly to factor. Ignoring %i columns.\n",width%reducefactor);
+     if (!quietmode)
+       fprintf(stderr,"Warning: width does not reduce evenly to factor. Ignoring %i columns.\n",width%reducefactor);
 
    if (height%reducefactor!=0)
-     fprintf(stderr,"Warning: height does not reduce evenly to factor. Ignoring %i rows.\n",height%reducefactor);
+     if (!quietmode)
+       fprintf(stderr,"Warning: height does not reduce evenly to factor. Ignoring %i rows.\n",height%reducefactor);
 
    int nacross=width/reducefactor;
    int ndown  =height/reducefactor;
