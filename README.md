@@ -1,5 +1,5 @@
 # core-inspector-tools
-# by santiago lombeyda
+# by santiago lombeyda (2013)
 
 general tools for dealing with binary data files from oman core scans, and reducing their size
 
@@ -7,7 +7,7 @@ general tools for dealing with binary data files from oman core scans, and reduc
 
 TOOLS
 ========================================
-
+use -h as parameter in command line tool for usage of individual tool
 
 
 viewBinaryData (c++)
