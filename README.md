@@ -10,15 +10,15 @@ TOOLS
 
 
 
-viewBinaryData.cpp
+viewBinaryData (c++)
 ----------------------------------------
 print out binary as bytes and as text
 
-binaryFloatsToPGM.cpp
+binaryFloatsToPGM (c++)
 ----------------------------------------
 convert floats in range to grayscale 0..255
 
-binaryDataToPGM.cpp
+binaryDataToPGM (c++)
 ----------------------------------------
 read int on/off (0 or >0), accumulate it into 16x16 buckets, and write out as grayscale pgm
 
