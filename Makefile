@@ -11,4 +11,4 @@ binaryDataToPGM: binaryDataToPGM.cpp
 	c++ -O3 -o binaryDataToPGM binaryDataToPGM.cpp
 
 clean:
-	\rm -rf binaryFloatsToPGM viewBinaryData binaryDataToPGM
+	\rm -rf binaryFloatsToPGM viewBinaryData binaryDataToPGM band.*.png
