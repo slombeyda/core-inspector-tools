@@ -8,10 +8,11 @@ set BIN_DIR  = '/home/santiago/src/core-inspector-tools'
 @ count = 0
 
 @ reducefactor = 16
+@ reducefactor = 64
 
 foreach borehole ( GT1 GT2 )
 
-  mkdir -p $DEST_DIR/$borehole
+  #mkdir -p $DEST_DIR/$borehole
 
   pushd $DATA_DIR/$borehole
 
@@ -32,8 +33,8 @@ foreach borehole ( GT1 GT2 )
      @ cols = `grep lines    $imghrd | awk -F '=' '{ print $2 ;}'`
      @ mins = `grep bands    $imghrd | awk -F '=' '{ print $2; }'`
 
-     mkdir -p $DEST_DIR/$borehole/$subdir0c
-     mkdir -p $DEST_DIR/$borehole/$subdir0c/$subdir1
+     #mkdir -p $DEST_DIR/$borehole/$subdir0c
+     #mkdir -p $DEST_DIR/$borehole/$subdir0c/$subdir1
 
      	printf '%i,' $count
      	printf '"%s","%s","%s",'      $borehole $dirname $filename
@@ -52,12 +53,15 @@ foreach borehole ( GT1 GT2 )
           set mindir = `printf "%02i" $n`
           set tmb = `printf "%s_%s_%s_%02i.pgm" $borehole $subdir0c $subdir1 $n`
           set pngtmb = `printf "%s_%s_%s_%02i.png" $borehole $subdir0c $subdir1 $n`
+          set jsontmb = `printf "%s_%s_%s_%02i.json" $borehole $subdir0c $subdir1 $n`
 
-          mkdir -p $DEST_DIR/$borehole/$subdir0c/$subdir1/$mindir
+          #mkdir -p $DEST_DIR/$borehole/$subdir0c/$subdir1/$mindir
 
-          $BIN_DIR/binaryDataToPGM -width $rows -height $cols -band $n -quiet < $img > $DEST_DIR/$borehole/$subdir0c/$subdir1/$mindir/$tmb
-            convert $tmb $pngtmb
-            \rm -f $tmb
+          $BIN_DIR/binaryDataToPGM -width $rows -height $cols -band $n -factor $reducefactor -json -quiet < $img > $DEST_DIR/$borehole/$subdir0c/$subdir1/$mindir/$jsontmb
+
+          #$BIN_DIR/binaryDataToPGM -width $rows -height $cols -band $n -quiet < $img > $DEST_DIR/$borehole/$subdir0c/$subdir1/$mindir/$tmb
+          #  convert $tmb $pngtmb
+          #  \rm -f $tmb
           @ n = $n + 1
         end
 
