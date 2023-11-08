@@ -2,8 +2,8 @@
 
 @ count = 0
 
-set borehole = "GT1"
-pushd /home/santiago/data/$borehole
+foreach borehole ( GT1 GT2 GT3)
+  pushd /home/santiago/data/$borehole
   foreach img ( C5701A-00????-??_????_??_??_??_??_??/*SWIRcalibminls_simple )
 
      set imghrd = $img.hdr
@@ -33,4 +33,7 @@ pushd /home/santiago/data/$borehole
         echo $newfilename.tmb.png ':' $w'x'$h
      @ count = $count + 1
   end
-popd
+
+  popd
+
+end

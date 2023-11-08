@@ -7,19 +7,20 @@ set BIN_DIR  = '/home/santiago/src/core-inspector-tools'
 
 @ count = 0
 
-set borehole = "GT1"
+foreach borehole ( GT2 GT3 )
 
-mkdir -p $DEST_DIR/$borehole
+  mkdir -p $DEST_DIR/$borehole
 
-pushd $DATA_DIR/$borehole
-  foreach img ( C5701A-00????-??_????_??_??_??_??_??/*SWIRcalibminls_simple )
+  pushd $DATA_DIR/$borehole
+
+  foreach img ( C?????-00????-??_????_??_??_??_??_??/*SWIRcalibminls_simple )
 
      set imghrd = $img.hdr
      set dirname =  `echo $img | sed -e 's_/.*__'`
      set filename = `echo $img | sed -e 's_.*/__'`
      set basedir = `echo $dirname | awk -F '-' '{ print $1; }'`
      set subdir0   = `echo $dirname | awk -F '-' '{ print $2; }'`
-     set subdir0c  = `echo $subdir0 | sed -e 's/M$//' -e 's/Z$//'`
+     set subdir0c  = `echo $subdir0 | sed -e 's/M$//' -e 's/Z$//' -e's/^0//'`
      set subdir1   = `echo $dirname | awk -F '-' '{ print $3; }' | sed -e 's/_.*//'`
 
      @ subdir0index = `echo $subdir0c`
@@ -54,4 +55,7 @@ pushd $DATA_DIR/$borehole
         end
      @ count = $count + 1
   end
-popd
+
+  popd
+
+end
