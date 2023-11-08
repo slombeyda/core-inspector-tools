@@ -17,6 +17,11 @@ int skipheader=-1;
 
 int reduceMode= REDUCE_MODE_IGNORE;
 
+const int FORMAT_PGM  = 0;
+const int FORMAT_JSON = 1;
+
+int outputformat = FORMAT_PGM;
+
 bool quietmode=false;
 
 int main(int nargs, char **args) {
@@ -38,6 +43,10 @@ int main(int nargs, char **args) {
      } else if (strequals(args[narg],"-jumptohalf")) {
        if (skipheader<0) skipheader=0;
        skipheader+=width*(height/2)*sizeof(int);
+     } else if (strequals(args[narg],"-pgm")) {
+       outputformat = FORMAT_PGM;
+     } else if (strequals(args[narg],"-json")) {
+       outputformat = FORMAT_JSON;
      } else if (strequals(args[narg],"-quiet")) {
        quietmode=true;
      } else if (strequals(args[narg],"-band")) {
@@ -78,7 +87,12 @@ int main(int nargs, char **args) {
 
    if (skipheader>0) fseek(stdin,skipheader,SEEK_CUR);
 
-   printf("P5\n%i %i\n%i\n",nacross,ndown,255);
+
+   if (outputformat==FORMAT_PGM)
+     printf("P5\n%i %i\n%i\n",nacross,ndown,255);
+   else if (outputformat==FORMAT_JSON)
+     printf("{\n  \"width\":%i,\n  \"height\":%i,\n  \"maxgray\":%i,\n  \"data\":\n[\n",nacross,ndown,255);
+
 
    for (int j=0; j<ndown; j++)  {
       fread(readbuffer,sizeof(int),width*reducefactor,stdin);
@@ -101,8 +115,20 @@ int main(int nargs, char **args) {
              outbuffer[i]=(unsigned char)(midbuffer[i]>255?255:midbuffer[i]);
            }
        }
-       fwrite(outbuffer,1,nacross,stdout);
+       if (outputformat==FORMAT_PGM)
+         fwrite(outbuffer,1,nacross,stdout);
+       else if (outputformat==FORMAT_JSON) {
+         for (int i=0; i<nacross; i++) {
+             printf("%i",outbuffer[i]);
+             if (i==nacross-1) {
+                 if (j<ndown-1) putchar(',');
+                 putchar('\n');
+             } else putchar(',');
+         }
+       }
    }
+   if (outputformat==FORMAT_JSON)
+     printf("]\n}\n");
 
    return 0;
 }
