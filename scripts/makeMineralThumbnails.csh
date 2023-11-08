@@ -7,7 +7,9 @@ set BIN_DIR  = '/home/santiago/src/core-inspector-tools'
 
 @ count = 0
 
-foreach borehole ( GT2 GT3 )
+@ reducefactor = 16
+
+foreach borehole ( GT1 GT2 )
 
   mkdir -p $DEST_DIR/$borehole
 
@@ -39,8 +41,8 @@ foreach borehole ( GT2 GT3 )
      	printf '%i,%i,'               $subdir0index $subdir1index
      	printf '%i,%i,%i\n'           $rows $cols $mins
 
-        @ w = $rows / 16
-        @ h = $cols / 16
+        @ w = $rows / $reducefactor
+        @ h = $cols / $reducefactor
 
         #set newfilename = `printf "%s_%04i_%02i"  $borehole $subdir0index $subdir1index`
         #echo $newfilename.tmb.png ':' $w'x'$h
@@ -48,12 +50,19 @@ foreach borehole ( GT2 GT3 )
         @ n = 0
         while ( $n < $mins )
           set mindir = `printf "%02i" $n`
-          mkdir -p $DEST_DIR/$borehole/$subdir0c/$subdir1/$mindir
           set tmb = `printf "%s_%s_%s_%02i.pgm" $borehole $subdir0c $subdir1 $n`
+          set pngtmb = `printf "%s_%s_%s_%02i.png" $borehole $subdir0c $subdir1 $n`
+
+          mkdir -p $DEST_DIR/$borehole/$subdir0c/$subdir1/$mindir
+
           $BIN_DIR/binaryDataToPGM -width $rows -height $cols -band $n -quiet < $img > $DEST_DIR/$borehole/$subdir0c/$subdir1/$mindir/$tmb
+            convert $tmb $pngtmb
+            \rm -f $tmb
           @ n = $n + 1
         end
+
      @ count = $count + 1
+
   end
 
   popd
