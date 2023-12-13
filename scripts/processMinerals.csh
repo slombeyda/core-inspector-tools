@@ -67,10 +67,10 @@ foreach borehole ( GT1A GT2A GT3A )
 
      if ( $DRYRUN > 0 ) then
        echo mkdir \-p $DEST_DIR/$borehole/$sectionZdir
-       echo mkdir \-p $DEST_DIR/$borehole/$sectionZdir/$sectiondir
+       echo mkdir \-p $DEST_DIR/$borehole/$sectionZdir/$piecedir
      else
        mkdir -p $DEST_DIR/$borehole/$sectionZdir
-       mkdir -p $DEST_DIR/$borehole/$sectionZdir/$sectiondir
+       mkdir -p $DEST_DIR/$borehole/$sectionZdir/$piecedir
      endif
 
      if ( $LOG > 0 ) then
