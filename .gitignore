@@ -7,8 +7,17 @@
 # Unignore all dirs
 !*/
 
-# Ingnore all images
+# Unignore makefile
+!Makefile
+
+# Ignore all images
 *.png
 *.pgm
 *.jpg
 *.jpeg
+*.json
+
+# Ignore executables
+viewBinaryData
+binaryFloatsToPGM
+binaryDataToPGM
