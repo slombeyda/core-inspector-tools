@@ -1,9 +1,27 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
+
 
 #define strequals(s0,s1) (!strcmp((s0),(s1)))
 #define null NULL
+
+
+const int MODE_TO_BYTES  = 0;
+const int MODE_TO_SHORTS = 1;
+const int MODE_FLOATS    = 2;
+
+const int FILE_FORMAT_PGM    = 0;
+const int FILE_FORMAT_JSON   = 1;
+const int FILE_FORMAT_CSV    = 2;
+const int FILE_FORMAT_ASCII  = 3;
+const int FILE_FORMAT_BIN    = 4;
+
+const char* FILE_FORMAT_EXTENSIONS[] = { "pgm","json","csv","txt","raw" };
+
+
+
 
 char *strasspaces(char *s) {
   char *spaces=null;
@@ -14,7 +32,8 @@ char *strasspaces(char *s) {
   return spaces;
 }
 
-void printPGMHeader(FILE *foutptr, int w, int h, int nsamples, int nthslicepiece, int nslicesperpiece) {
+
+void printPGMHeader(FILE *foutptr, int w, int nsamples, int h, int nthslicepiece, int nslicesperpiece) {
   int sliceo= nthslicepiece   *nslicesperpiece;
   int slicef=(nthslicepiece+1)*nslicesperpiece-1;
   if (slicef>=h) slicef=h-1;
@@ -25,13 +44,38 @@ void printPGMHeader(FILE *foutptr, int w, int h, int nsamples, int nthslicepiece
                     w,nsamples*nslices,255);
 }
 
-void makeOutFilename(char *outfilename,char *fileoutprefix,int h, int nthslicepiece, int nslicesperpiece) {
+void printJSONHeader(FILE *foutptr, int w, int nsamples, int h,
+                                    int w_reducefactor, int nsamples_reducefactor, int h_reducefactor,
+                                    int w_f, int nsamples_f, int h_f,
+                                    int start_slice, int end_slice, float minf, float maxf) {
+      fprintf(foutptr,"{\n  \"width\":%i,\n"
+                         "  \"nsamples\":%i,\n"
+                         "  \"height\":%i,\n"
+                         "  \"width_reducefactor\":%i,\n"
+                         "  \"nsamples_reducefactor\":%i,\n"
+                         "  \"height_reducefactor\":%i,\n"
+                         "  \"width_reduced\":%i,\n"
+                         "  \"nsamples_reduced\":%i,\n"
+                         "  \"height_reduced\":%i,\n"
+                         "  \"start_slice\":%i,\n"
+                         "  \"end_slice\":%i,\n"
+                         "  \"min_value\":%f,\n"
+                         "  \"max_value\":%f,\n"
+                         "  \"data\":\n[\n",
+                          w,nsamples,h,
+                          w_reducefactor,nsamples_reducefactor,h_reducefactor,
+                          w_f,nsamples_f,h_f,
+                          start_slice,end_slice,
+                          minf,maxf);
+}
+
+void makeOutFilename(char *outfilename,char *fileoutprefix,int h, int nthslicepiece, int nslicesperpiece, int fileformat) {
     int sliceo= nthslicepiece   *nslicesperpiece;
     int slicef=(nthslicepiece+1)*nslicesperpiece-1;
     if (slicef>=h) slicef=h-1;
-    snprintf(outfilename,512,"%s.%04i-%04i.pgm",
+    snprintf(outfilename,512,"%s.%04i-%04i.%s",
                              fileoutprefix,
-                             sliceo,slicef);
+                             sliceo,slicef,FILE_FORMAT_EXTENSIONS[fileformat]);
 }
 
 void readInMinAndMax(FILE *fptr,float *minf_ptr,float *maxf_ptr, bool printboundsonly) {
@@ -62,9 +106,7 @@ void readInMinAndMax(FILE *fptr,float *minf_ptr,float *maxf_ptr, bool printbound
 }
 
 
-const int MODE_PGM         = 0;
-const int MODE_TEXT_SHORTS = 1;
-const int MODE_TEXT_FLOATS = 2;
+
 
 int main(int nargs, char **args) {
   //    min max: -0.182626 .. 2.111865
@@ -80,6 +122,7 @@ int main(int nargs, char **args) {
   int   w_reducefactor=1;
   int   nsamples_reducefactor=1;
   int   total_reducefactor=1;
+  float total_reducefactor_FLOAT=1.0f;
 
   int    w_f=w;
   int    h_f=h;
@@ -96,7 +139,8 @@ int main(int nargs, char **args) {
   FILE * foutptr=stdout;
   char   outfilename[512];
 
-  int outputmode=MODE_PGM;
+  int outputmode=MODE_TO_BYTES;
+  int fileformat=FILE_FORMAT_PGM;
 
   for (int i=1; i<nargs; i++) {
      if (strequals(args[i],"-h")) {
@@ -107,11 +151,20 @@ int main(int nargs, char **args) {
         printf("%s  [-outputinpieces -slicesperpiece <n slices> -fileoutprefix <filename base>]\n",strasspaces(args[0]));
         return 0;
      } else if (strequals(args[i],"-pgm")) {
-        outputmode=MODE_PGM;
+        outputmode=MODE_TO_BYTES;
+        fileformat=FILE_FORMAT_PGM;
+     } else if (strequals(args[i],"-jsonfloats")) {
+        outputmode=MODE_FLOATS;
+        fileformat=FILE_FORMAT_JSON;
+     } else if (strequals(args[i],"-textbytes")) {
+        outputmode=MODE_TO_BYTES;
+        fileformat=FILE_FORMAT_ASCII;
      } else if (strequals(args[i],"-textshorts")) {
-        outputmode=MODE_TEXT_SHORTS;
+        outputmode=MODE_TO_SHORTS;
+        fileformat=FILE_FORMAT_ASCII;
      } else if (strequals(args[i],"-textfloats")) {
-        outputmode=MODE_TEXT_FLOATS;
+        outputmode=MODE_FLOATS;
+        fileformat=FILE_FORMAT_ASCII;
      } else if (strequals(args[i],"-outputinpieces")) {
         outputinpieces=true;
      } else if (strequals(args[i],"-slicesperpiece")) {
@@ -160,6 +213,7 @@ int main(int nargs, char **args) {
   int slicesizebytes= w*nsamples*sizeof(float);
 
   total_reducefactor=h_reducefactor*w_reducefactor*nsamples_reducefactor;
+  total_reducefactor_FLOAT=(float)total_reducefactor;
   w_f=w/w_reducefactor;
   h_f=h/h_reducefactor;
   nsamples_f=nsamples/nsamples_reducefactor;
@@ -193,22 +247,67 @@ int main(int nargs, char **args) {
       fprintf(stderr,"Error: must define -fileoutprefix <filename out prefix> to be able to export separete files.\n");
       return 1;
     }
-  } else
-    fprintf(foutptr,"P5\n# width %i | bands %i x height %i\n%i %i %i\n",w_f,nsamples_f,h_f,w_f,nsamples_f*h_f,255);
+  } else {
+    if (fileformat==FILE_FORMAT_PGM)
+      fprintf(foutptr,"P5\n# width %i | bands %i x height %i\n%i %i %i\n",w_f,nsamples_f,h_f,w_f,nsamples_f*h_f,255);
+    else if (fileformat==FILE_FORMAT_JSON)
+      fprintf(foutptr,"{\n  \"width\":%i,\n"
+                         "  \"nsamples\":%i,\n"
+                         "  \"height\":%i,\n"
+                         "  \"width_reducefactor\":%i,\n"
+                         "  \"nsamples_reducefactor\":%i,\n"
+                         "  \"height_reducefactor\":%i,\n"
+                         "  \"width_reduced\":%i,\n"
+                         "  \"nsamples_reduced\":%i,\n"
+                         "  \"height_reduced\":%i,\n"
+                         "  \"start_slice\":%i,\n"
+                         "  \"end_slice\":%i,\n"
+                         "  \"min_value\":%f,\n"
+                         "  \"max_value\":%f,\n"
+                         "  \"data\":\n[\n",
+                          w,nsamples,h,
+                          w_reducefactor,nsamples_reducefactor,h_reducefactor,
+                          w_f,nsamples_f,h_f,
+                          0,h-1,
+                          minf,maxf);
+  }
+
 
   unsigned long int nthslice=0;
-  while (nthslice<h && fread(buffer,sizeof(float),slicesize*dh,fptr)>0) {
-    //if (DEBUG) fprintf(stderr,"%i -> %i\n",nthslice,h);
+  int nread=0;
+  int nNANs=0;
+  while (nthslice<h && (nread=fread(buffer,sizeof(float),slicesize*dh,fptr))>0) {
+    if (nread!=slicesize*dh)
+      fprintf(stderr,"ERROR: underead %i out of %i (%lui bytes).\n",nread,slicesize*dh,slicesize*dh*sizeof(float));
+    for (int i=0; i<nread; i++)
+      if (isnan(buffer[i])) {
+         nNANs++;
+         buffer[i]=0.0f;
+       }
+
     int index_in_slice_piece=nthslice%nslicesperpiece;
+
     // if first slice in piece, open foutptr
     if (outputinpieces && index_in_slice_piece==0) {
       if (nthslice>0) {
+         if (fileformat==FILE_FORMAT_JSON) {
+           fseek(foutptr,-2,SEEK_CUR);
+           fprintf(foutptr,"\n]\n}\n");
+         }
          fclose(foutptr);
          nthslicepiece++;
        }
-       makeOutFilename(outfilename,fileoutprefix,h,nthslicepiece,nslicesperpiece);
+       makeOutFilename(outfilename,fileoutprefix,h,nthslicepiece,nslicesperpiece,fileformat);
        foutptr=fopen(outfilename,"wb");
-       printPGMHeader(foutptr,w_f,h_f,nsamples_f,nthslicepiece,dh_f);
+       if (fileformat==FILE_FORMAT_PGM)
+         printPGMHeader(foutptr,w_f,nsamples_f,h_f,nthslicepiece,dh_f);
+       else if (fileformat==FILE_FORMAT_JSON)
+         printJSONHeader(foutptr, w,nsamples,dh,
+                                  w_reducefactor,nsamples_reducefactor,h_reducefactor,
+                                  w_f,nsamples_f,dh_f,
+                                  nthslice,nthslice+dh-1,
+                                  minf,maxf);
+
     }
 
     for (int index=0; index<slicesize_f*dh_f; index++) {
@@ -220,30 +319,49 @@ int main(int nargs, char **args) {
         for (int kernel_h=0; kernel_h<h_reducefactor; kernel_h++) {
           for (int kernel_nsamples=0; kernel_nsamples<nsamples_reducefactor; kernel_nsamples++) {
             for (int kernel_w=0; kernel_w<w_reducefactor; kernel_w++) {
-              f+=buffer[sindex+kernel_w+w*(kernel_nsamples+kernel_h*nsamples)];
+              int i=sindex+kernel_w+w*(kernel_nsamples+(kernel_h*nsamples));
+              //if (isnan(buffer[i])) {
+              //  fprintf(stderr,"NAN @ %6i/%6i : %4i %4i %4i\n",
+              //               index, slicesize_f*dh_f,
+              //              (index%w_f),
+              //             ((index/w_f)%nsamples_f     ),
+              //              (index/w_f)/nsamples_f
+              //          );
+              //}
+              f+=buffer[i];
             }
           }
         }
-        f=f/(float)total_reducefactor;
+        f=f/total_reducefactor_FLOAT;
       } else f=buffer[index];
 
       int i=(f-minf)*256.0/df;
       if (i<0) i=0;
       else if (i>255) i=255;
       char c=(unsigned char)i;
-      if (outputmode==MODE_PGM)
+      if (fileformat==FILE_FORMAT_PGM)
         fputc(c,foutptr);
-      else if (outputmode==MODE_TEXT_FLOATS)
+      else if (outputmode==MODE_FLOATS && fileformat==FILE_FORMAT_JSON)
         fprintf(foutptr,"%f,\n",f);
-      else if (outputmode==MODE_TEXT_SHORTS)
+      else if (outputmode==MODE_TO_BYTES && fileformat==FILE_FORMAT_JSON)
         fprintf(foutptr,"%i,\n",i);
+      else if (fileformat==FILE_FORMAT_BIN && outputmode==MODE_TO_BYTES)
+        fputc(c,foutptr);
+      else
+        fprintf(stderr,"Warning: incomplete list of data writers. Use float/byte:JSON or grayscale:PGM.\n");
     }
     nthslice+=dh;
     if (nthslice+dh>h) dh=h-nthslice;
     dh_f=dh/h_reducefactor;
   }
 
-  if (foutptr!=stdout) fclose(foutptr);
+  if (foutptr!=stdout) {
+    if (fileformat==FILE_FORMAT_JSON) {
+      fseek(foutptr,-2,SEEK_CUR);
+      fprintf(foutptr,"\n]\n}\n");
+    }
+    fclose(foutptr);
+  }
 
   return 0;
 }
