@@ -1,38 +1,37 @@
 #!/bin/csh
 
-@ NSLICES = 32
 
-echo PGMS
+@ MIN_SPECTRA_VALUE = 0
+@ MAX_SPECTRA_VALUE = 2
 
-./binaryFloatsToPGM -pgm \
-	  -bounds -0.182627 2.111866 \
-		-reduce 4 3 4 \
-	  ../../data/sample/GT1A_100Z-1/GT1A_100Z-1_SWIRcalib.img \
-	  -outputinpieces -slicesperpiece $NSLICES -fileoutprefix ~/Desktop/slices/pgms/GT1A_100Z-1_SPECTRA
+set DATA_DIR = "/export/data11/OmanDP_processed/GT_dataset_archive"
+set BIN_DIR  = "/home/santiago/src/core-inspector-tools"
 
+foreach BORE_HOLE ( GT1A )
 
-echo JSON
+    set BASE_DIR = $DATA_DIR/$BORE_HOLE
 
-./binaryFloatsToPGM -jsonfloats \
-	  -bounds -0.182627 2.111866 \
-		-reduce 4 3 4 \
-	  ../../data/sample/GT1A_100Z-1/GT1A_100Z-1_SWIRcalib.img \
-	  -outputinpieces -slicesperpiece $NSLICES -fileoutprefix ~/Desktop/slices/json/GT1A_100Z-1_SPECTRA
+    @ W_RF =    16
+    @ S_RF =     3
+    @ H_RF =    16
+    @ NSLICES = $H_RF * 8
 
-exit
+    #if (DEBUG) # confirm exisitence of file
+    #ls -la $BASE_DIR/GT1A_100Z-1/GT1A_100Z-1_SWIRcalib.img
 
-echo TEXTSHORTS
+    echo \
+    $BIN_DIR/binaryFloatsToPGM -jsonfloats \
+	        -bounds $MIN_SPECTRA_VALUE $MAX_SPECTRA_VALUE \
+		-reduce $W_RF $S_RF $H_RF \
+	  		$BASE_DIR/GT1A_100Z-1/GT1A_100Z-1_SWIRcalib.img \
+	  	-outputinpieces -slicesperpiece $NSLICES \
+	  	-fileoutprefix ~/sample-GT1A_100Z-1_SPECTRA
 
-echo ./binaryFloatsToPGM -textshorts \
-	  -bounds -0.182627 2.111866 \
-	  ../../data/sample/GT1A_100Z-1/GT1A_100Z-1_SWIRcalib.img \
-	  -outputinpieces -slicesperpiece $NSLICES -fileoutprefix ~/Desktop/slices/shorts/GT1A_100Z-1_SPECTRA \
-		>& /dev/null
+    $BIN_DIR/binaryFloatsToPGM -jsonfloats \
+	        -bounds $MIN_SPECTRA_VALUE $MAX_SPECTRA_VALUE \
+		-reduce $W_RF $S_RF $H_RF \
+	  		$BASE_DIR/GT1A_100Z-1/GT1A_100Z-1_SWIRcalib.img \
+	  	-outputinpieces -slicesperpiece $NSLICES \
+	  	-fileoutprefix ~/sample-GT1A_100Z-1_SPECTRA
 
-echo TEXTFLOATS
-
-echo ./binaryFloatsToPGM -textfloats \
-	  -bounds -0.182627 2.111866 \
-	  ../../data/sample/GT1A_100Z-1/GT1A_100Z-1_SWIRcalib.img \
-	  -outputinpieces -slicesperpiece $NSLICES -fileoutprefix ~/Desktop/slices/floats/GT1A_100Z-1_SPECTRA \
-		>& /dev/null
+end

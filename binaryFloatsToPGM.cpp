@@ -209,8 +209,9 @@ int main(int nargs, char **args) {
      }
   }
 
-  int slicesize=      w*nsamples;
-  int slicesizebytes= w*nsamples*sizeof(float);
+  long unsigned int slicesize=      w*nsamples;
+  long unsigned int slicesizebytes= w*nsamples*sizeof(float);
+
 
   total_reducefactor=h_reducefactor*w_reducefactor*nsamples_reducefactor;
   total_reducefactor_FLOAT=(float)total_reducefactor;
@@ -240,7 +241,11 @@ int main(int nargs, char **args) {
   if (dh>h) dh=h;
   int dh_f= dh/h_reducefactor;
 
-  float *buffer= (float *)malloc(slicesizebytes*h_reducefactor);
+  //if (DEBUG)
+  //fprintf(stderr,"With slice size of %li will read %i slices of %li bytes, total %li\n",
+  //		  slicesize,nslicesperpiece,slicesizebytes,slicesizebytes*nslicesperpiece);
+
+  float *buffer= (float *)malloc(slicesizebytes*nslicesperpiece);
 
   if (outputinpieces) {
     if (fileoutprefix==null) {
