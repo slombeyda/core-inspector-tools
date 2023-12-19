@@ -279,11 +279,11 @@ int main(int nargs, char **args) {
 
 
   unsigned long int nthslice=0;
-  int nread=0;
+  unsigned long nread=0;
   int nNANs=0;
   while (nthslice<h && (nread=fread(buffer,sizeof(float),slicesize*dh,fptr))>0) {
     if (nread!=slicesize*dh)
-      fprintf(stderr,"ERROR: underead %i out of %i (%lui bytes).\n",nread,slicesize*dh,slicesize*dh*sizeof(float));
+      fprintf(stderr,"ERROR: underead %li out of %li (%li bytes).\n",nread,slicesize*dh,slicesize*dh*sizeof(float));
     for (int i=0; i<nread; i++)
       if (isnan(buffer[i])) {
          nNANs++;
