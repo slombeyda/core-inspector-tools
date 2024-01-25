@@ -7,6 +7,9 @@ set BIN_DIR  = '/home/santiago/src/core-inspector-tools'
 
 @ count = 0
 
+@ reducefactorRAW   =   1
+@ reducefactorHIGH  =   2
+@ reducefactorLARGE =   4
 @ reducefactorBASE  =  16
 @ reducefactorSMALL =  64
 @ reducefactorTMB   =  96
@@ -81,7 +84,8 @@ foreach borehole ( GT1A GT2A GT3A )
      	printf '%i,%i,%i\n'           $rows $cols $mins
      endif
 
-     foreach reducefactor ( $reducefactorBASE $reducefactorSMALL $reducefactorTMB $reducefactorMINI $reducefactorNANO )
+     #foreach reducefactor ( $reducefactorBASE $reducefactorSMALL $reducefactorTMB $reducefactorMINI $reducefactorNANO )
+     foreach reducefactor ( $reducefactorRAW $reducefactorLARGE )
 
        @ w = $rows / $reducefactor
        @ h = $cols / $reducefactor
@@ -89,6 +93,11 @@ foreach borehole ( GT1A GT2A GT3A )
        @ rf = $reducefactor
 
        @ n = 0
+
+       @ WRITEJSON = 1
+       if ( $reducefactor < 16 ) then
+          @ WRITEJSON = 0
+       endif
 
        while ( $n < $mins )
           set mindir      = `printf "%02i" $n`
@@ -106,12 +115,14 @@ foreach borehole ( GT1A GT2A GT3A )
           if ( $DRYRUN > 0 ) then
               echo "+ " $BIN_DIR"/binaryDataToPGM " $mindir " / " $productbase "[.png|.json]"
           else
+              if ( $WRITEJSON > 0 ) then
               $BIN_DIR/binaryDataToPGM \
 				-width $rows -height $cols -band $n \
 				-factor $reducefactor \
 				-json -quiet \
 				< $img \
 				> $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$json
+	      endif
               $BIN_DIR/binaryDataToPGM \
 				-width $rows -height $cols -band $n \
 				-factor $reducefactor \
