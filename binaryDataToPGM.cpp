@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #define strequals(s0,s1) (!strcmp((s0),(s1)))
 #define warn(s) fprintf(stderr,"%s\n",s)
@@ -22,6 +23,8 @@ const int  MAX_MODE_AUTO_PER_PIECE =3;
 
 int maxmode= MAX_MODE_AUTO_PER_PIECE;
 int datamode=DATA_MODE_FLOAT;
+bool enhancedmode=false;
+double enhancedexp =1;
 
 int width =-1;
 int height=-1;
@@ -70,7 +73,16 @@ void readFloats(FILE *fptr, int nacross, int ndown, int width, int height, int r
                    midbuffer[i]+=readbuffer[index];
               }
           }
-          midbuffer[i]=midbuffer[i]*256.0f/upperbound/(float)kernelsize;
+          // average across kernel, and normalize
+          if (enhancedmode) {
+            double v=(double)midbuffer[i]/upperbound/(double)kernelsize;
+            v=v*M_PI/2.0;
+            v=cos(v);
+            v=pow(v,enhancedexp);
+            v=1.0-v;
+            midbuffer[i]=(float)(v*256.0);
+          } else
+            midbuffer[i]=midbuffer[i]*256.0f/upperbound/(float)kernelsize;
           if (midbuffer[i]<0.0f)    midbuffer[i]=0.0f;
           if (midbuffer[i]>=255.0f) midbuffer[i]=255.0f;
           outbuffer[i]=(unsigned char)((unsigned int)midbuffer[i]);
@@ -151,6 +163,10 @@ int main(int nargs, char **args) {
        datamode=DATA_MODE_INT;
      } else if (strequals(args[narg],"-float")) {
        datamode=DATA_MODE_FLOAT;
+     } else if (strequals(args[narg],"-enhanced")) {
+       datamode=DATA_MODE_FLOAT;
+       enhancedmode=true;
+       sscanf(args[++narg],"%lf",&enhancedexp);
      } else if (strequals(args[narg],"-pgm")) {
        outputformat = FORMAT_PGM;
      } else if (strequals(args[narg],"-json")) {
@@ -204,7 +220,7 @@ int main(int nargs, char **args) {
    float minv,maxv;
    bool calculatebounds=true;
    if (calculatebounds) readInBounds(&minv,&maxv,fptr,width,height,datamode);
-   
+
    //if (DEBUG) fprintf(stderr,"%i: %f .. %f\n",band,minv,maxv);
 
    if (outputformat==FORMAT_PGM)
