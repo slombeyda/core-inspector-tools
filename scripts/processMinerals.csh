@@ -19,8 +19,13 @@ set BIN_DIR  = '/home/santiago/src/core-inspector-tools'
 @ VERBOSE = 1
 @ DRYRUN  = 0
 @ LOG     = 1
+@ MINMAX  = 1
 
 foreach borehole ( GT1A GT2A GT3A )
+
+  if ( $MINMAX > 0 ) then
+    echo "MINERAL,MIN,MAX" >! $DEST_DIR/$borehole/$borehole.MINERALS-META.csv
+  endif
 
   if ( $DRYRUN > 0 ) then
     echo mkdir \-p $DEST_DIR/$borehole
@@ -85,7 +90,8 @@ foreach borehole ( GT1A GT2A GT3A )
      endif
 
      #foreach reducefactor ( $reducefactorBASE $reducefactorSMALL $reducefactorTMB $reducefactorMINI $reducefactorNANO )
-     foreach reducefactor ( $reducefactorRAW $reducefactorLARGE )
+     #foreach reducefactor ( $reducefactorRAW $reducefactorLARGE )
+     foreach reducefactor ( $reducefactorRAW )
 
        @ w = $rows / $reducefactor
        @ h = $cols / $reducefactor
@@ -94,17 +100,28 @@ foreach borehole ( GT1A GT2A GT3A )
 
        @ n = 0
 
+
        @ WRITEJSON = 1
        if ( $reducefactor < 16 ) then
           @ WRITEJSON = 0
        endif
 
+       @ ABUNDANCE = 0
+       @ PRESENCE  = 0
+       if ( $reducefactor == 1 ) then
+          @ ABUNDANCE = 1
+          @ PRESENCE  = 1
+       endif
+
+       # PA: PRESENCE/ABSCENSE  vs AB: ABUNDANCE
        while ( $n < $mins )
           set mindir      = `printf "%02i" $n`
           set productbase = `printf "%s_%s_%s_%s.factor_1to%03i" $borehole $sectionZdir $piecedir $mindir $rf`
           set json        = ${productbase}'.json'
           set png         = ${productbase}'.png'
-          set pgm         = ${productbase}'.pgm'
+          set alpng       = ${productbase}'.abundance.local.png'
+          set agpng       = ${productbase}'.abundance.global.png'
+          set pgm         = ${productbase}'.TMP.pgm'
 
           if ( $DRYRUN > 0 ) then
             echo mkdir \-p $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir
@@ -115,24 +132,54 @@ foreach borehole ( GT1A GT2A GT3A )
           if ( $DRYRUN > 0 ) then
               echo "+ " $BIN_DIR"/binaryDataToPGM " $mindir " / " $productbase "[.png|.json]"
           else
+              # MINMAX
+              if ( $MINMAX > 0 ) then
+                    $BIN_DIR/binaryDataToPGM \
+                    				-width $rows -height $cols -band $n \
+                    				-float -minmaxcsv -factor $reducefactor \
+                    				-json -quiet \
+                    				< $img \
+                    				>> $DEST_DIR/$borehole/$borehole.MINERALS-META.csv
+      	      endif
+
+              # JSON: PRESENCE/ABSENCE x REDUCEFACTOR
               if ( $WRITEJSON > 0 ) then
-              $BIN_DIR/binaryDataToPGM \
-				-width $rows -height $cols -band $n \
-				-factor $reducefactor \
-				-json -quiet \
-				< $img \
-				> $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$json
-	      endif
-              $BIN_DIR/binaryDataToPGM \
-				-width $rows -height $cols -band $n \
-				-factor $reducefactor \
-				-pgm -quiet \
-				< $img \
-				> $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$pgm
-              convert $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$pgm \
-		      $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$png
+                    $BIN_DIR/binaryDataToPGM \
+                    				-width $rows -height $cols -band $n \
+                    				-onoff -factor $reducefactor \
+                    				-json -quiet \
+                    				< $img \
+                    				> $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$json
+      	      endif
+
+              # PNG: ABUNDANCE(local) x REDUCEFACTOR
+              if ( $ABUNDANCE > 0 ) then
+                $BIN_DIR/binaryDataToPGM \
+                    				-width $rows -height $cols -band $n \
+                    				-float -factor $reducefactor \
+                    				-pgm -quiet \
+                    				< $img \
+                    				> $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$pgm
+
+                convert $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$pgm \
+                    		      $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$alpng
+      	      endif
+
+              # PNG: PRESENCE x REDUCEFACTOR
+              if ( $PRESENCE > 0 ) then
+                    $BIN_DIR/binaryDataToPGM \
+                    				-width $rows -height $cols -band $n \
+                    				-onoff -factor $reducefactor \
+                    				-png -quiet \
+                    				< $img \
+                    				> $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$pgm
+                convert $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$pgm \
+                    		      $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$png
+      	      endif
+
 
               \rm -f  $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$pgm
+
           endif
 
           @ n = $n + 1

@@ -23,7 +23,8 @@ const int  MAX_MODE_AUTO_PER_PIECE =3;
 
 int maxmode= MAX_MODE_AUTO_PER_PIECE;
 int datamode=DATA_MODE_FLOAT;
-bool enhancedmode=false;
+bool enhancedmode=    false;
+bool calculatebounds= false;
 double enhancedexp =1;
 
 int width =-1;
@@ -31,10 +32,16 @@ int height=-1;
 int reducefactor=16;
 int skipheader=-1;
 
+float minv=-1;
+float maxv=-2;
+
 int reduceMode= REDUCE_MODE_IGNORE;
 
 const int FORMAT_PGM  = 0;
 const int FORMAT_JSON = 1;
+
+const int FORMAT_MINMAX_CSV  = 100;
+const int FORMAT_MINMAX_JSON = 101;
 
 int outputformat = FORMAT_PGM;
 
@@ -163,6 +170,12 @@ int main(int nargs, char **args) {
        datamode=DATA_MODE_INT;
      } else if (strequals(args[narg],"-float")) {
        datamode=DATA_MODE_FLOAT;
+       if (minv>maxv)
+         calculatebounds=true;
+     } else if (strequals(args[narg],"-databounds")) {
+         calculatebounds=false;
+         sscanf(args[++narg],"%f",&minv);
+         sscanf(args[++narg],"%f",&maxv);
      } else if (strequals(args[narg],"-enhanced")) {
        datamode=DATA_MODE_FLOAT;
        enhancedmode=true;
@@ -171,6 +184,15 @@ int main(int nargs, char **args) {
        outputformat = FORMAT_PGM;
      } else if (strequals(args[narg],"-json")) {
        outputformat = FORMAT_JSON;
+     } else if (strequals(args[narg],"-minmax")) {
+       outputformat = FORMAT_MINMAX_CSV;
+       calculatebounds=true;
+     } else if (strequals(args[narg],"-minmaxcsv")) {
+       outputformat = FORMAT_MINMAX_CSV;
+       calculatebounds=true;
+     } else if (strequals(args[narg],"-minmaxjson")) {
+       outputformat = FORMAT_MINMAX_JSON;
+       calculatebounds=true;
      } else if (strequals(args[narg],"-quiet")) {
        quietmode=true;
      } else if (strequals(args[narg],"-band")) {
@@ -217,11 +239,16 @@ int main(int nargs, char **args) {
 
    if (skipheader>0) fseek(fptr,skipheader,SEEK_CUR);
 
-   float minv,maxv;
-   bool calculatebounds=true;
    if (calculatebounds) readInBounds(&minv,&maxv,fptr,width,height,datamode);
 
-   //if (DEBUG) fprintf(stderr,"%i: %f .. %f\n",band,minv,maxv);
+   if (outputformat==FORMAT_MINMAX_CSV) {
+      printf("%i,%f,%f\n",band,minv,maxv);
+      return 0;
+   } else if (outputformat==FORMAT_MINMAX_JSON) {
+      printf("{\n  \"band\":%i,\n  \"min\":%f,\n  \"max\":%f\n}\n",band,minv,maxv);
+      return 0;
+   }
+
 
    if (outputformat==FORMAT_PGM)
      printf("P5\n%i %i\n%i\n",nacross,ndown,255);
