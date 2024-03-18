@@ -16,10 +16,10 @@ set BIN_DIR  = '/home/santiago/src/core-inspector-tools'
 @ reducefactorMINI  = 106
 @ reducefactorNANO  = 160
 
-@ VERBOSE = 1
+@ VERBOSE = 0
 @ DRYRUN  = 0
 @ LOG     = 1
-@ MINMAX  = 1
+@ MINMAX  = 0
 
 foreach borehole ( GT1A GT2A GT3A )
 
@@ -108,9 +108,13 @@ foreach borehole ( GT1A GT2A GT3A )
 
        @ ABUNDANCE = 0
        @ PRESENCE  = 0
+       @ ABUNDANCE_LOCAL  = 0
+       @ ABUNDANCE_GLOBAL = 0
        if ( $reducefactor == 1 ) then
+          @ PRESENCE  = 0
           @ ABUNDANCE = 1
-          @ PRESENCE  = 1
+          @   ABUNDANCE_LOCAL  = 1
+          @   ABUNDANCE_GLOBAL = 1
        endif
 
        # PA: PRESENCE/ABSCENSE  vs AB: ABUNDANCE
@@ -122,6 +126,8 @@ foreach borehole ( GT1A GT2A GT3A )
           set alpng       = ${productbase}'.abundance.local.png'
           set agpng       = ${productbase}'.abundance.global.png'
           set pgm         = ${productbase}'.TMP.pgm'
+          set alpngbase   = ${productbase}'.abundance.local.'
+          set agpngbase   = ${productbase}'.abundance.global.'
 
           if ( $DRYRUN > 0 ) then
             echo mkdir \-p $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir
@@ -136,8 +142,8 @@ foreach borehole ( GT1A GT2A GT3A )
               if ( $MINMAX > 0 ) then
                     $BIN_DIR/binaryDataToPGM \
                     				-width $rows -height $cols -band $n \
-                    				-float -minmaxcsv -factor $reducefactor \
-                    				-json -quiet \
+                    				-float -factor $reducefactor \
+                    				-minmaxcsv -quiet \
                     				< $img \
                     				>> $DEST_DIR/$borehole/$borehole.MINERALS-META.csv
       	      endif
@@ -152,33 +158,73 @@ foreach borehole ( GT1A GT2A GT3A )
                     				> $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$json
       	      endif
 
+              foreach e ( 0 4 12 )
+
+              set enhancement = ""
+              set e_ext = ""
+
+              if ( $e > 0 ) then
+                  set enhancement = "-enhanced $e"
+                  set e_ext       = ".e$e"
+              endif
+
               # PNG: ABUNDANCE(local) x REDUCEFACTOR
-              if ( $ABUNDANCE > 0 ) then
+              if ( $ABUNDANCE_LOCAL > 0 ) then
                 $BIN_DIR/binaryDataToPGM \
                     				-width $rows -height $cols -band $n \
                     				-float -factor $reducefactor \
+                                                -databounds 0.0 1.0 \
                     				-pgm -quiet \
+                    				$enhancement \
                     				< $img \
                     				> $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$pgm
 
+                echo "." $alpngbase$e_ext.png
                 convert $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$pgm \
-                    		      $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$alpng
+                    		      $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$alpngbase$e_ext.png
+                \rm -f  $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$pgm
       	      endif
+
+
+              # PNG: ABUNDANCE(global) x REDUCEFACTOR
+              if ( $ABUNDANCE_GLOBAL > 0 ) then
+                #set minv = `cat $DEST_DIR/$borehole/$borehole.MINERALS-BORELONG-META.csv | awk -F ',' '{ if ( NR>1 && $1=='$n' ) { print $2 } }'`
+                #set maxv = `cat $DEST_DIR/$borehole/$borehole.MINERALS-BORELONG-META.csv | awk -F ',' '{ if ( NR>1 && $1=='$n' ) { print $3 } }'`
+                set minv = `cat $DEST_DIR/$borehole/RGREENBERGER.MINERALS-BORELONG-META.csv | awk -F ',' '{ if ( NR>1 && $1=='$n' ) { print $2 } }'`
+                set maxv = `cat $DEST_DIR/$borehole/RGREENBERGER.MINERALS-BORELONG-META.csv | awk -F ',' '{ if ( NR>1 && $1=='$n' ) { print $3 } }'`
+
+                $BIN_DIR/binaryDataToPGM \
+                    				-width $rows -height $cols -band $n \
+                    				-float -factor $reducefactor \
+                                                -databounds $minv $maxv \
+                    				-pgm -quiet \
+                    				$enhancement \
+                    				< $img \
+                    				> $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$pgm
+
+                echo "." $agpngbase$e_ext.png
+                convert $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$pgm \
+                    		      $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$agpngbase$e_ext.png
+                \rm -f  $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$pgm
+      	      endif
+
+              end
 
               # PNG: PRESENCE x REDUCEFACTOR
               if ( $PRESENCE > 0 ) then
                     $BIN_DIR/binaryDataToPGM \
                     				-width $rows -height $cols -band $n \
                     				-onoff -factor $reducefactor \
-                    				-png -quiet \
+                    				-pgm -quiet \
                     				< $img \
                     				> $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$pgm
                 convert $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$pgm \
                     		      $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$png
+                \rm -f  $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$pgm
+                echo "." $png
       	      endif
 
 
-              \rm -f  $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir/$pgm
 
           endif
 
