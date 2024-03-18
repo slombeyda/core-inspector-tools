@@ -17,10 +17,14 @@ const int FILE_FORMAT_JSON   = 1;
 const int FILE_FORMAT_CSV    = 2;
 const int FILE_FORMAT_ASCII  = 3;
 const int FILE_FORMAT_BIN    = 4;
+const int FILE_FORMAT_PPM    = 5;
 
-const char* FILE_FORMAT_EXTENSIONS[] = { "pgm","json","csv","txt","raw" };
+const char* FILE_FORMAT_EXTENSIONS[] = { "pgm","json","csv","txt","raw","ppm"};
 
 
+int band_red   = 236;
+int band_green = 114;
+int band_blue  = 32;
 
 
 char *strasspaces(char *s) {
@@ -43,6 +47,20 @@ void printPGMHeader(FILE *foutptr, int w, int nsamples, int h, int nthslicepiece
                     sliceo,slicef,
                     w,nsamples*nslices,255);
 }
+
+
+void printPPMHeader(FILE *foutptr, int w, int nsamples, int h, int nthslicepiece, int nslicesperpiece) {
+  int sliceo= nthslicepiece   *nslicesperpiece;
+  int slicef=(nthslicepiece+1)*nslicesperpiece-1;
+  if (slicef>=h) slicef=h-1;
+  int nslices=slicef-sliceo+1;
+  fprintf(foutptr,"P6\n# width %i | bands %i x slices %i - %i\n%i %i %i\n",
+                    w,nsamples,
+                    sliceo,slicef,
+                    w,nsamples*nslices,255);
+}
+
+
 
 void printJSONHeader(FILE *foutptr, int w, int nsamples, int h,
                                     int w_reducefactor, int nsamples_reducefactor, int h_reducefactor,
@@ -150,6 +168,9 @@ int main(int nargs, char **args) {
         printf("%s  [-autobounds | -min <min float> | -max <max float> | bounds <min float> <max float>]\n",strasspaces(args[0]));
         printf("%s  [-outputinpieces -slicesperpiece <n slices> -fileoutprefix <filename base>]\n",strasspaces(args[0]));
         return 0;
+     } else if (strequals(args[i],"-ppm")) {
+        outputmode=MODE_TO_BYTES;
+        fileformat=FILE_FORMAT_PPM;
      } else if (strequals(args[i],"-pgm")) {
         outputmode=MODE_TO_BYTES;
         fileformat=FILE_FORMAT_PGM;
@@ -255,6 +276,8 @@ int main(int nargs, char **args) {
   } else {
     if (fileformat==FILE_FORMAT_PGM)
       fprintf(foutptr,"P5\n# width %i | bands %i x height %i\n%i %i %i\n",w_f,nsamples_f,h_f,w_f,nsamples_f*h_f,255);
+    else if (fileformat==FILE_FORMAT_PPM)
+      fprintf(foutptr,"P6\n# width %i | bands %i x height %i\n%i %i %i\n",w_f,nsamples_f,h_f,w_f,nsamples_f*h_f,255);
     else if (fileformat==FILE_FORMAT_JSON)
       fprintf(foutptr,"{\n  \"width\":%i,\n"
                          "  \"nsamples\":%i,\n"
@@ -306,6 +329,8 @@ int main(int nargs, char **args) {
        foutptr=fopen(outfilename,"wb");
        if (fileformat==FILE_FORMAT_PGM)
          printPGMHeader(foutptr,w_f,nsamples_f,h_f,nthslicepiece,dh_f);
+       else if (fileformat==FILE_FORMAT_PPM)
+         printPPMHeader(foutptr,w_f,nsamples_f,h_f,nthslicepiece,dh_f);
        else if (fileformat==FILE_FORMAT_JSON)
          printJSONHeader(foutptr, w,nsamples,dh,
                                   w_reducefactor,nsamples_reducefactor,h_reducefactor,
@@ -317,6 +342,7 @@ int main(int nargs, char **args) {
 
     for (int index=0; index<slicesize_f*dh_f; index++) {
       float f=0;
+      //float color_f[3]={0,0,0};
       if (total_reducefactor>0) {
         int sindex=   (index%w_f)                 * w_reducefactor                    +
                      ((index/w_f)%nsamples_f     )* nsamples_reducefactor *w          +
@@ -334,6 +360,9 @@ int main(int nargs, char **args) {
               //          );
               //}
               f+=buffer[i];
+              //color_f[0]+=buffer[i+band_red];
+              //color_f[1]+=buffer[i+band_green];
+              //color_f[2]+=buffer[i+band_blue;
             }
           }
         }
@@ -345,6 +374,8 @@ int main(int nargs, char **args) {
       else if (i>255) i=255;
       char c=(unsigned char)i;
       if (fileformat==FILE_FORMAT_PGM)
+        fputc(c,foutptr);
+      else if (fileformat==FILE_FORMAT_PPM)
         fputc(c,foutptr);
       else if (outputmode==MODE_FLOATS && fileformat==FILE_FORMAT_JSON)
         fprintf(foutptr,"%f,\n",f);
