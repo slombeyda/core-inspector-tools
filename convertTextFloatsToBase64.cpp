@@ -73,10 +73,14 @@ int main(int nargs, char **args) {
      v=(f-2.0f)/2.0f; if (f<0.0f) f=0.0f; if (f>1.0f)  f=1.0f;
      if (nbytes==1) {
        v=(f*256);     if (v<0)    v=0;    if (v>255)   v=255;
+       ptr[i]= (unsigned char)  v;
      } else if (nbytes==2) {
        v=(f*65536);   if (v<0)    v=0;    if (v>65535) v=65535;
+       sptr[i]=(unsigned short) v;
+     } else {
+       fprintf(stderr,"Error. nbytes %i not supported.\n",nbytes);
+       return 1;
      }
-     sptr[i]=(unsigned short) v;
 
    }
 
