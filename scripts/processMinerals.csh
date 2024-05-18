@@ -5,6 +5,9 @@ set DEST_DIR = '/export/data11/OmanDP_portal_data'
 
 set BIN_DIR  = '/home/santiago/src/core-inspector-tools'
 
+set REF_DIR  = '/export/data11/OmanDP_portal_data/summaries'
+set MIN_REF_FILE = $REF_DIR'/RGREENBERGER.MINERALS-BORELONG-META.csv'
+
 @ count = 0
 
 @ reducefactorRAW   =   1
@@ -110,6 +113,7 @@ foreach borehole ( GT1A GT2A GT3A )
        @ PRESENCE  = 0
        @ ABUNDANCE_LOCAL  = 0
        @ ABUNDANCE_GLOBAL = 0
+
        if ( $reducefactor == 1 ) then
           @ PRESENCE  = 0
           @ ABUNDANCE = 1
@@ -126,8 +130,8 @@ foreach borehole ( GT1A GT2A GT3A )
           set alpng       = ${productbase}'.abundance.local.png'
           set agpng       = ${productbase}'.abundance.global.png'
           set pgm         = ${productbase}'.TMP.pgm'
-          set alpngbase   = ${productbase}'.abundance.local.'
-          set agpngbase   = ${productbase}'.abundance.global.'
+          set alpngbase   = ${productbase}'.abundance.local'
+          set agpngbase   = ${productbase}'.abundance.global'
 
           if ( $DRYRUN > 0 ) then
             echo mkdir \-p $DEST_DIR/$borehole/$sectionZdir/$piecedir/$mindir
@@ -159,6 +163,7 @@ foreach borehole ( GT1A GT2A GT3A )
       	      endif
 
               foreach e ( 0 4 12 )
+              #foreach e ( 0 )
 
               set enhancement = ""
               set e_ext = ""
@@ -190,8 +195,8 @@ foreach borehole ( GT1A GT2A GT3A )
               if ( $ABUNDANCE_GLOBAL > 0 ) then
                 #set minv = `cat $DEST_DIR/$borehole/$borehole.MINERALS-BORELONG-META.csv | awk -F ',' '{ if ( NR>1 && $1=='$n' ) { print $2 } }'`
                 #set maxv = `cat $DEST_DIR/$borehole/$borehole.MINERALS-BORELONG-META.csv | awk -F ',' '{ if ( NR>1 && $1=='$n' ) { print $3 } }'`
-                set minv = `cat $DEST_DIR/$borehole/RGREENBERGER.MINERALS-BORELONG-META.csv | awk -F ',' '{ if ( NR>1 && $1=='$n' ) { print $2 } }'`
-                set maxv = `cat $DEST_DIR/$borehole/RGREENBERGER.MINERALS-BORELONG-META.csv | awk -F ',' '{ if ( NR>1 && $1=='$n' ) { print $3 } }'`
+                set minv = `cat $MIN_REF_FILE | awk -F ',' '{ if ( NR>1 && $1=='$n' ) { print $2 } }'`
+                set maxv = `cat $MIN_REF_FILE | awk -F ',' '{ if ( NR>1 && $1=='$n' ) { print $3 } }'`
 
                 $BIN_DIR/binaryDataToPGM \
                     				-width $rows -height $cols -band $n \

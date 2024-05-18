@@ -9,6 +9,9 @@ binaryFloatsToPGM: binaryFloatsToPGM.cpp
 binaryDataToPGM: binaryDataToPGM.cpp
 	c++ -O3 -o binaryDataToPGM binaryDataToPGM.cpp
 
+binaryFloatsTo16bitPGM: binaryFloatsTo16bitPGM.cpp
+	c++ -O3 -o binaryFloatsTo16bitPGM binaryFloatsTo16bitPGM.cpp
+
 convertTextFloatsToBase64: convertTextFloatsToBase64.cpp utils/Base64Encoder.o
 	g++ -O3 -o convertTextFloatsToBase64 utils/Base64Encoder.o convertTextFloatsToBase64.cpp
 

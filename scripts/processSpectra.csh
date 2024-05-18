@@ -4,8 +4,8 @@
 @ MIN_SPECTRA_VALUE = 0
 @ MAX_SPECTRA_VALUE = 2
 
-set DATA_DIR = "/export/data11/OmanDP_processed/GT_dataset_archive"
-set BIN_DIR  = "/home/santiago/src/core-inspector-tools"
+set DATA_DIR     = "/export/data11/OmanDP_processed/GT_dataset_archive"
+set BIN_DIR      = "/home/santiago/src/core-inspector-tools"
 set OUT_DATA_DIR = "/export/data11/OmanDP_portal_data"
 
 # LOW RES, CURVES GET FLATTENED, BUT SMALL SIZE
@@ -25,16 +25,14 @@ set OUT_DATA_DIR = "/export/data11/OmanDP_portal_data"
 
 @ NSLICES = $H_RF * 4
 
-
-#foreach BORE_HOLE ( GT1A GT2A GT3A )
-foreach BORE_HOLE ( GT3A )
+foreach BORE_HOLE ( GT1A GT2A GT3A )
   echo $BORE_HOLE
   set BASE_DIR = $DATA_DIR/$BORE_HOLE
   foreach ROCK_SECTION_PATH ( $BASE_DIR/$BORE_HOLE* )
 
     set ROCK_SECTION_AND_PIECE_DIR = `echo $ROCK_SECTION_PATH | sed -e's/.*'$BORE_HOLE'_//'`
-    set ROCK_SECTION               = `echo $ROCK_SECTION_AND_PIECE_DIR | awk -F'-' '{print $1}'`
-    set ROCK_PIECE                 = `echo $ROCK_SECTION_AND_PIECE_DIR | awk -F'-' '{print $2}'`
+    set ROCK_SECTION               = `echo $ROCK_SECTION_AND_PIECE_DIR | awk -F'-' '{print int($1)"Z"}'`
+    set ROCK_PIECE                 = `echo $ROCK_SECTION_AND_PIECE_DIR | awk -F'-' '{print int($2)}'`
     @   ROCK_SECTION_NUMBER        = `echo $ROCK_SECTION | sed -e 's/[^0-9]//g'`
     set ROCK_SECTION_LETTER        = `echo $ROCK_SECTION | sed -e 's/[0-9]//g'`
     set ROCK_SECTION_DIR           = `printf "%04i%c" $ROCK_SECTION_NUMBER $ROCK_SECTION_LETTER`
@@ -48,9 +46,9 @@ foreach BORE_HOLE ( GT3A )
     #echo $OUT_DATA_DIR $BORE_HOLE $ROCK_SECTION_DIR $ROCK_PIECE_DIR
     set TARGET_DIR = "$OUT_DATA_DIR/$BORE_HOLE/$ROCK_SECTION_DIR/$ROCK_PIECE_DIR"
 
-    @ w        = `grep "^samples" $SPECTRA_INFO | awk -F'=' '{print $2}'`
-    @ nsamples = `grep "^bands" $SPECTRA_INFO | awk -F'=' '{print $2}'`
-    @ h        = `grep "^lines" $SPECTRA_INFO | awk -F'=' '{print $2}'`
+    @ w        = `grep "^samples" $SPECTRA_INFO | awk -F'=' '{print int($2)}'`
+    @ nsamples = `grep "^bands"   $SPECTRA_INFO | awk -F'=' '{print int($2)}'`
+    @ h        = `grep "^lines"   $SPECTRA_INFO | awk -F'=' '{print int($2)}'`
 
 
     set OUT_SPECTRA_REDUCE = "W${W_RF}_S${S_RF}_H${H_RF}-n{$NSLICES}"
@@ -79,4 +77,3 @@ foreach BORE_HOLE ( GT3A )
    echo "."
   end
 end
-
