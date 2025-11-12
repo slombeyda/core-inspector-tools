@@ -12,9 +12,18 @@ from pathlib import Path
 VERBOSE = False
 DRYRUN = False
 LOG = True
-MINMAX = False
 DEBUG = False
-WRITEJSON = False
+
+# JUST MIN MAX [CSV default]
+WRITEMINMAX = False
+
+# JUST PRESENCE BINARY ON/OFF
+WRITEPRESENCEPGM  = False
+WRITEPRESENCEJSON = False
+
+# NORMALIZED FLOAT TO BYTE
+WRITEJSON         = False
+WRITEPGM          = False
 
 
 #                                                        DEFAULTS
@@ -41,6 +50,8 @@ REDUCE_FACTORS = {
     'MINI': 106,
     'NANO': 160,
 }
+
+EHANCEFACTORS = []
 
 reductionTargets = ['RAW']
 reductionTargetFactors = [1]
@@ -127,6 +138,8 @@ class ImageHandler:
         print(f'hdr: {self.imghdr}')
         print(f'nrows: {self.rows}  ncols: {self.cols}  nmins: {self.mins}')
 
+
+
 def print_current_image_info_log(id,borehole,imgptr):
         print(
             id,
@@ -160,6 +173,8 @@ def format_product_base(borehole, imgptr, mindir, reducefactor):
         '.factor_1to',
         f'{reducefactor:03d}',
     ])
+
+
 
 def toPGM(imgptr, n, reducefactor, options,infile,outfile,append=False):
     args=[
@@ -210,27 +225,55 @@ def process_borehole_image(borehole, borehole_dest, imgptr, img_path, count):
 
             minmax_csv_file = f'{borehole}.MINERALS-META.csv'
             json_file  = productbase + '.json'
-            png_file   = productbase + '.png'
-            alpng_file = productbase + '.abundance.local.png'
-            agpng_file = productbase + '.abundance.global.png'
-            pgm_file   = productbase + '.TMP.pgm'
+            pgm_file   = productbase + '.pgm'
+            #png_file   = productbase + '.png'
+            #alpng_file = productbase + '.abundance.local.png'
+            #agpng_file = productbase + '.abundance.global.png'
 
             dest_dir = os.path.join(borehole_dest,
                                     imgptr.sectionZdir_fmt,
                                     imgptr.piecedir_fmt,
                                     mindir)
+
             makeDir(dest_dir)
 
-
-            if MINMAX:
+            if WRITEMINMAX:
+                append= True
+                topgmargs=['-float','-minmaxcsv']
                 product_file=os.path.join(borehole_dest,minmax_csv_file)
-                toPGM(imgptr,n,reducefactor,['-float','-minmaxcsv'],
-                      img_path, product_file, True);
+                toPGM(imgptr,n,reducefactor,topgmargs,img_path, product_file, append)
+
+            if WRITEPRESENCEJSON:
+                append= False
+                topgmargs=['-onoff','-json']
+                product_file=os.path.join(dest_dir, json_file)
+                toPGM(imgptr,n,reducefactor,topgmargs,img_path, product_file, append);
+
+            if WRITEPRESENCEPGM:
+                append= False
+                topgmargs=['-onoff','-pgm']
+                product_file=os.path.join(dest_dir, json_file)
+                toPGM(imgptr,n,reducefactor,topgmargs,img_path, product_file, append);
 
             if WRITEJSON:
-                product_file=os.path.join(dest_dir, json_file)
-                toPGM(imgptr,n,reducefactor,['-onoff','-json'],
-                      img_path, product_file, False);
+                # NOT IMPLEMENTED : TOO SPACE CONSUMING
+                pass
+
+            if WRITEPGM:
+                append= False
+                topgmargs=['-float','-pgm']
+                minbandv=0
+                maxbandv=1
+                topgmargs.append(['-databounds', str(minbandv), str(maxbandv)])
+                if len(EHANCEFACTORS)>0:
+                    for e in EHANCEFACTORS:
+                        topgmargsE=topgmargs+['-enhancement', e]
+                        pgm_e_file=productbase+'.e_'+e+'.pgm'
+                        product_file=os.path.join(dest_dir, pgm_e_file)
+                        toPGM(imgptr,n,reducefactor,topgmargsE,img_path, product_file, append);
+                else:
+                    product_file=os.path.join(dest_dir, pgm_file)
+                    toPGM(imgptr,n,reducefactor,topgmargs,img_path, product_file, append);
         
 
 
@@ -245,7 +288,7 @@ def process_borehole(borehole):
 
     makeDir(borehole_dest)
 
-    if MINMAX:
+    if WRITEMINMAX:
         meta_path = os.path.join(borehole_dest, f'{borehole}.MINERALS-META.csv')
         with open(meta_path, 'w') as f:
             f.write('MINERAL,MIN,MAX\n')
@@ -265,11 +308,16 @@ def processMinerals(args):
     global DEBUG
     global DRYRUN
     global VERBOSE
-    global MINMAX
+    global WRITEMINMAX
+    global WRITEJSON
+    global WRITEPGM
+    global WRITEPRESENCEPGM
+    global WRITEPRESENCEJSON
     global LOG
     global BOREHOLES
     global REDUCEFACTORS
     global BANDS
+    global EHANCEFACTORS
 
     i = 1
     while i < len(args):
@@ -289,8 +337,8 @@ def processMinerals(args):
             DRYRUN = True
         elif args[i] == '-VERBOSE':
             VERBOSE = True
-        elif args[i] == '-minmax':
-            MINMAX = True
+        elif args[i] == '-minmax' or args[i] == '-minmaxcsv':
+            WRITEMINMAX = True
 
         elif args[i] == '-boreholes':
             i = i + 1
@@ -307,6 +355,14 @@ def processMinerals(args):
             for j in range(nbands):
                 i = i + 1
                 BANDS.append(args[i])
+
+        elif args[i] == '-enhancefactors':
+            i = i + 1
+            nenhancefactors = int(args[i])
+            EHANCEFACTORS=[]
+            for j in range(nenhancefactors):
+                i = i + 1
+                EHANCEFACTORS.append(args[i])
 
         elif args[i] == '-reducefactors':
             i = i + 1
