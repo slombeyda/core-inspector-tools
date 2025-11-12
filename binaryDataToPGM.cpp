@@ -53,13 +53,18 @@ void readInBounds(float *min_value, float *max_value,FILE *fptr,int w, int h, in
    if (datamode==DATA_MODE_FLOAT) {
      int count=0;
      float minv,maxv,v;
-     fread(&v,sizeof(float),1,fptr);
+     v=NAN;
+     while (isnan(v)) {
+        fread(&v,sizeof(float),1,fptr);
+        count ++;
+     }
      minv=maxv=v;
-     count ++;
      for (; count<w*h; count++) {
         fread(&v,sizeof(float),1,fptr);
-        if (v>maxv) maxv=v;
-        if (v<minv) minv=v;
+        if (!isnan(v)) {
+          if (v>maxv) maxv=v;
+          if (v<minv) minv=v;
+        }
      }
      min_value[0]=minv;
      max_value[0]=maxv;
