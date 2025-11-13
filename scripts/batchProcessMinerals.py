@@ -51,7 +51,7 @@ REDUCE_FACTORS = {
     'NANO': 160,
 }
 
-EHANCEFACTORS = []
+ENHANCEFACTORS = []
 
 reductionTargets = ['RAW']
 reductionTargetFactors = [1]
@@ -265,8 +265,8 @@ def process_borehole_image(borehole, borehole_dest, imgptr, img_path, count):
                 minbandv=0
                 maxbandv=1
                 topgmargs.append(['-databounds', str(minbandv), str(maxbandv)])
-                if len(EHANCEFACTORS)>0:
-                    for e in EHANCEFACTORS:
+                if len(ENHANCEFACTORS)>0:
+                    for e in ENHANCEFACTORS:
                         topgmargsE=topgmargs+['-enhancement', e]
                         pgm_e_file=productbase+'.e_'+e+'.pgm'
                         product_file=os.path.join(dest_dir, pgm_e_file)
@@ -303,8 +303,29 @@ def process_borehole(borehole):
         count=count+1
        
 
+def printDefaults():
+    print("MINERAL_SET_TARGET:", MINERAL_SET_TARGET)
+    print("MINSET_ID:", MINSET_ID)
+    print("BOREHOLES:", BOREHOLES)
+    print("BANDS:", BANDS)
+    print("REDUCEFACTORS:", REDUCEFACTORS)
+    print("ENHANCEFACTORS:", ENHANCEFACTORS)
+
+def printUsage():
+    print(f'{args[0]} [-h|-help]')
+    print('         [-LOG] [-DEBUG] [-DRYRUN] [-VERBOSE]')
+    print('         [-minmax]')
+    print('         [-reducefactors n rf1 rf2 ... rfn]')
+    print('         [-boreholes n b1 b2 ... bn]')
+    print('         [-bands m band1 band2 ... bandm]')
+    print('         [-mineralsetfilename filename]')
+    print('         [-mineralsetshortid shortid]')
+    print()
+    printDefaults()
 
 def processMinerals(args):
+
+    global LOG
     global DEBUG
     global DRYRUN
     global VERBOSE
@@ -313,24 +334,21 @@ def processMinerals(args):
     global WRITEPGM
     global WRITEPRESENCEPGM
     global WRITEPRESENCEJSON
-    global LOG
+
     global BOREHOLES
     global REDUCEFACTORS
     global BANDS
-    global EHANCEFACTORS
+    global ENHANCEFACTORS
     global MINERAL_SET_TARGET
     global MINSET_ID
 
     i = 1
     while i < len(args):
         if args[i] == '-h' or args[i] == '-help':
-            print( args[0],'[-h|-help]')
-            print('         [-LOG] [-DEBUG] [-DRYRUN] [-VERBOSE]')
-            print('         [-minmax]')
-            print('         [-reducefactors n rf1 rf2 ... rfn]')
-            print('         [-boreholes n b1 b2 ... bn]')
-            print('         [-bands m band1 band2 ... bandm]')  
+            printUsage()
             return
+        if args[i] == '-defaults':
+            printDefaults()
         elif args[i] == '-LOG':
             LOG = True
         elif args[i] == '-DEBUG':
@@ -369,10 +387,10 @@ def processMinerals(args):
         elif args[i] == '-enhancefactors':
             i = i + 1
             nenhancefactors = int(args[i])
-            EHANCEFACTORS=[]
+            ENHANCEFACTORS=[]
             for j in range(nenhancefactors):
                 i = i + 1
-                EHANCEFACTORS.append(args[i])
+                ENHANCEFACTORS.append(args[i])
 
         elif args[i] == '-reducefactors':
             i = i + 1
