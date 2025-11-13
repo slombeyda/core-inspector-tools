@@ -19,4 +19,4 @@ utils/Base64Encoder.o: utils/Base64Encoder.cpp utils/Base64Encoder.h
 	pushd utils; g++ -O3 -c Base64Encoder.cpp; popd;
 
 clean:
-	\rm -rf binaryFloatsToPGM viewBinaryData binaryDataToPGM band.*.png
+	\rm -rf binaryFloatsToPGM viewBinaryData binaryDataToPGM binaryFloatsTo16bitPGM convertTextFloatsToBase64 utils/Base64Encoder.o band.*.png
