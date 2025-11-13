@@ -34,11 +34,11 @@ BOREHOLES = ['BA1', 'BA3', 'BA4']
 BANDS = []
 REDUCEFACTORS = [1]
 
-MINERAL_SET_TARGET = 'VNIRcalib_resampled_map_export'
-MINSET_ID = 'SW'
-
 MINERAL_SET_TARGET = 'SWIRcalib_map_export'
 MINSET_ID = 'SW'
+
+MINERAL_SET_TARGET = 'VNIRcalib_resampled_map_export'
+MINSET_ID = 'VN'
 
 REDUCE_FACTORS = {
     'RAW': 1,
@@ -223,9 +223,9 @@ def process_borehole_image(borehole, borehole_dest, imgptr, img_path, count):
             mindir = f'{n:02d}'
             productbase= format_product_base(borehole, imgptr, mindir, reducefactor)
 
-            minmax_csv_file = f'{borehole}.MINERALS-META.csv'
-            json_file  = productbase + '.json'
-            pgm_file   = productbase + '.pgm'
+            minmax_csv_file = f'{borehole}.MINERALS-META.{MINSET_ID}.csv'
+            json_file  = productbase + f'.{MINSET_ID}.json'
+            pgm_file   = productbase + f'.{MINSET_ID}.pgm'
             #png_file   = productbase + '.png'
             #alpng_file = productbase + '.abundance.local.png'
             #agpng_file = productbase + '.abundance.global.png'
@@ -289,7 +289,7 @@ def process_borehole(borehole):
     makeDir(borehole_dest)
 
     if WRITEMINMAX:
-        meta_path = os.path.join(borehole_dest, f'{borehole}.MINERALS-META.csv')
+        meta_path = os.path.join(borehole_dest, f'{borehole}.MINERALS-META.{MINSET_ID}.csv')
         with open(meta_path, 'w') as f:
             f.write('MINERAL,MIN,MAX\n')
 
@@ -318,6 +318,8 @@ def processMinerals(args):
     global REDUCEFACTORS
     global BANDS
     global EHANCEFACTORS
+    global MINERAL_SET_TARGET
+    global MINSET_ID
 
     i = 1
     while i < len(args):
@@ -339,6 +341,14 @@ def processMinerals(args):
             VERBOSE = True
         elif args[i] == '-minmax' or args[i] == '-minmaxcsv':
             WRITEMINMAX = True
+
+        elif args[i] == '-mineralsetfilename':
+            i = i + 1
+            MINERAL_SET_TARGET = args[i]
+
+        elif args[i] == '-mineralsetshortid':
+            i = i + 1
+            MINSET_ID = args[i]
 
         elif args[i] == '-boreholes':
             i = i + 1
