@@ -34,11 +34,11 @@ BOREHOLES = ['BA1', 'BA3', 'BA4']
 BANDS = []
 REDUCEFACTORS = [1]
 
-MINERAL_SET_TARGET = 'SWIRcalib_map_export'
-MINSET_ID = 'SW'
+MINERAL_SET_TARGET_POOL = ['SWIRcalib_map_export', 'VNIRcalib_resampled_map_export']
+MINSET_ID_POOL          = ['SWIR', 'VNIR']
 
 MINERAL_SET_TARGET = 'VNIRcalib_resampled_map_export'
-MINSET_ID = 'VN'
+MINSET_ID = 'VNIR'
 
 REDUCE_FACTORS = {
     'RAW': 1,
@@ -205,7 +205,7 @@ def toPGM(imgptr, n, reducefactor, options,infile,outfile,append=False):
         ["-factor", str(reducefactor)],
         ["-quiet"]
     ]
-    args.extend([o] for o in options)
+    args.append(options)
     runCommand('binaryDataToPGM',args,infile,outfile,append)
 
 
@@ -236,22 +236,22 @@ def process_borehole_image(borehole, borehole_dest, imgptr, img_path, count):
             ABUNDANCE_GLOBAL = 1
 
         if BANDS==[]:
-            nminstotarget = range(imgptr.mins)
+            nminstotarget = imgptr.mins
             BANDS = range(nminstotarget)
         else:
             nminstotarget = len(BANDS)
 
-        for n in nminstotarget:
+        for nm in range(nminstotarget):
+            b=int(BANDS[nm])
             if DEBUG:
-                print(f'4<<< {n}/{imgptr.mins}')
+                print(f'4<<< {b}/{imgptr.mins}')
 
-            b=BANDS[n]
-            mindir = f'{n:02d}'
+            mindir = f'{b:02d}'
             productbase= format_product_base(borehole, imgptr, mindir, reducefactor)
 
-            minmax_csv_file = f'{borehole}.MINERALS-META.{MINSET_ID}.csv'
-            json_file  = productbase + f'.{MINSET_ID}.{JSON_EXTENSION}'
-            pgm_file   = productbase + f'.{MINSET_ID}.{PGM_EXTENSION}'
+            minmax_csv_file = f'{borehole}.{MINSET_ID}.MINERALS-META.csv'
+            json_file  = productbase + f'.{JSON_EXTENSION}'
+            pgm_file   = productbase + f'.{PGM_EXTENSION}'
             #png_file   = productbase + '.png'
             #alpng_file = productbase + '.abundance.local.png'
             #agpng_file = productbase + '.abundance.global.png'
@@ -295,7 +295,7 @@ def process_borehole_image(borehole, borehole_dest, imgptr, img_path, count):
                 else:
                     minv=str(ABUNDANCE_PRESET_MIN)
                     maxv=str(ABUNDANCE_PRESET_MAX)
-                topgmargs.append(['-databounds', minv, maxv])
+                topgmargs.extend(['-databounds', minv, maxv])
 
                 if len(ENHANCEFACTORS)>0:
                     for e in ENHANCEFACTORS:
@@ -340,17 +340,26 @@ def printDefaults():
     print("BANDS:", BANDS)
     print("REDUCEFACTORS:", REDUCEFACTORS)
     print("ENHANCEFACTORS:", ENHANCEFACTORS)
+    print("ABUNDANCE_PRESET_MIN:", ABUNDANCE_PRESET_MIN)
+    print("ABUNDANCE_PRESET_MAX:", ABUNDANCE_PRESET_MAX)
+
+    print("MINERAL_SET_TARGET_POOL:", MINERAL_SET_TARGET_POOL)
+    print("MINSET_ID_POOL:", MINSET_ID_POOL)
 
 def printUsage(args):
     print(f'{args[0]} [-h|-help]')
     print('         [-LOG] [-DEBUG] [-DRYRUN] [-VERBOSE]')
     print('         [-extension ext] [-jsonextension ext] [-pgmextension ext]')
-    print('         [-minmax]')
+    print('         [-minmax|-minmaxcsv] [-pgm|-writepgm] [-writepresencepgm] [-writepresencejson]')
     print('         [-reducefactors n rf1 rf2 ... rfn]')
     print('         [-boreholes n b1 b2 ... bn]')
     print('         [-bands m band1 band2 ... bandm]')
     print('         [-mineralsetfilename filename]')
     print('         [-mineralsetshortid shortid]')
+    print('         [-usenthmineralset n] [-usemineralsetbyid setid]')
+    print('         [-abundancerange min max]')
+    print('         [-abundancereferencefile filename]')
+    print('         [-enhancefactors p ef1 ef2 ... efp]')
     print()
 
 def processMinerals(args):
@@ -372,6 +381,11 @@ def processMinerals(args):
     global MINERAL_SET_TARGET
     global MINSET_ID
 
+    global ABUNDANCE_PRESET_MIN
+    global ABUNDANCE_PRESET_MAX
+    global USEABUNDANCEFILE
+    global ABUNDANCE_REFERENCE_FILE
+
     global JSON_EXTENSION
     global PGM_EXTENSION
 
@@ -391,8 +405,18 @@ def processMinerals(args):
             DRYRUN = True
         elif args[i] == '-VERBOSE':
             VERBOSE = True
+
         elif args[i] == '-minmax' or args[i] == '-minmaxcsv':
             WRITEMINMAX = True
+
+        elif args[i] == '-writepresencepgm':
+            WRITEPRESENCEPGM = True
+
+        elif args[i] == '-writepresencejson':
+            WRITEPRESENCEJSON = True
+
+        elif args[i] == '-pgm' or args[i] == '-writepgm':
+            WRITEPGM = True
 
         elif args[i] == '-extension':
             i = i + 1
@@ -406,6 +430,38 @@ def processMinerals(args):
         elif args[i] == '-pgmextension':
             i = i + 1
             PGM_EXTENSION = args[i]
+
+        elif args[i] == '-abundancerange':
+            i = i + 1
+            ABUNDANCE_PRESET_MIN = float(args[i])
+            i = i + 1
+            ABUNDANCE_PRESET_MAX = float(args[i])
+
+        elif args[i] == '-abundancereferencefile':
+            i = i + 1
+            ABUNDANCE_REFERENCE_FILE = args[i]
+            USEABUNDANCEFILE = True
+
+        elif args[i] == '-usenthmineralset':
+            i = i + 1
+            nth = int(args[i])
+            if nth < len(MINERAL_SET_TARGET_POOL):
+                MINERAL_SET_TARGET = MINERAL_SET_TARGET_POOL[nth]
+                MINSET_ID = MINSET_ID_POOL[nth]
+            else:
+                print(f'Error: -usenthmineralset {nth} out of range')
+                return
+
+        elif args[i] == '-usemineralsetbyid':
+            i = i + 1
+            setid = args[i]
+            if setid in MINSET_ID_POOL:
+                index = MINSET_ID_POOL.index(setid)
+                MINERAL_SET_TARGET = MINERAL_SET_TARGET_POOL[index]
+                MINSET_ID = MINSET_ID_POOL[index]
+            else:
+                print(f'Error: -usemineralsetbyid {setid} not found')
+                return
 
         elif args[i] == '-mineralsetfilename':
             i = i + 1
