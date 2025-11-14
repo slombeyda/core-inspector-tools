@@ -55,6 +55,15 @@ ENHANCEFACTORS = []
 
 reductionTargets = ['RAW']
 reductionTargetFactors = [1]
+
+ABUNDANCE_REFERENCE_FILE = ''
+ABUNDANCE_PRESET_MIN = 0.0
+ABUNDANCE_PRESET_MAX = 1.0
+USEABUNDANCEFILE = False
+
+JSON_EXTENSION = 'json'
+PGM_EXTENSION  = 'pgm'
+
 #                                                          UITILS
 # ---------------------------------------------------------------
 
@@ -78,15 +87,29 @@ def makeDir(path):
         os.makedirs(path, exist_ok=True)
 
 
-def grepKeyValueFromFile(filepath, key):
+def grepKeyValueFromFile(filepath, key, delimiter='=', nth=1):
     with open(filepath) as f:
         for line in f:
             if line.strip().startswith(key):
                 try:
-                    return int(line.split('=')[1])
+                    return line.split(delimiter)[nth]
                 except Exception:
                     return 0
     return 0
+
+
+def grepKeyIntFromFile(filepath, key, delimiter='=', nth=1):
+    try:
+        return int(grepKeyValueFromFile(filepath, key, delimiter, nth))
+    except Exception:
+        return 0   
+
+
+def grepKeyFloatFromFile(filepath, key, delimiter='=', nth=1):
+    try:
+        return float(grepKeyValueFromFile(filepath, key, delimiter, nth))
+    except Exception:
+        return 0   
 
 
 #                                                          PATHS
@@ -125,9 +148,9 @@ class ImageHandler:
         self.sectionZdir_fmt = f'{self.sectionindex:04d}{self.sectiondirX}'
         self.piecedir_fmt = f'{self.pieceindex:03d}'
 
-        self.rows = grepKeyValueFromFile(self.imghdr, 'samples')
-        self.cols = grepKeyValueFromFile(self.imghdr, 'lines')
-        self.mins = grepKeyValueFromFile(self.imghdr, 'bands')
+        self.rows = grepKeyIntFromFile(self.imghdr, 'samples')
+        self.cols = grepKeyIntFromFile(self.imghdr, 'lines')
+        self.mins = grepKeyIntFromFile(self.imghdr, 'bands')
 
         if VERBOSE:
             self.printInfo()
@@ -137,7 +160,6 @@ class ImageHandler:
         print(f'img: {self.imgpath}')
         print(f'hdr: {self.imghdr}')
         print(f'nrows: {self.rows}  ncols: {self.cols}  nmins: {self.mins}')
-
 
 
 def print_current_image_info_log(id,borehole,imgptr):
@@ -175,12 +197,11 @@ def format_product_base(borehole, imgptr, mindir, reducefactor):
     ])
 
 
-
 def toPGM(imgptr, n, reducefactor, options,infile,outfile,append=False):
     args=[
-        ["-width", str(imgptr.rows)],
+        ["-width",  str(imgptr.rows)],
         ["-height", str(imgptr.cols)],
-        ["-band", str(n)],
+        ["-band",   str(n)],
         ["-factor", str(reducefactor)],
         ["-quiet"]
     ]
@@ -188,8 +209,8 @@ def toPGM(imgptr, n, reducefactor, options,infile,outfile,append=False):
     runCommand('binaryDataToPGM',args,infile,outfile,append)
 
 
-
 def process_borehole_image(borehole, borehole_dest, imgptr, img_path, count):
+    global BANDS
     borehole_img_dst = os.path.join(borehole_dest,
                                     imgptr.sectionZdir_fmt,
                                     imgptr.piecedir_fmt
@@ -214,18 +235,23 @@ def process_borehole_image(borehole, borehole_dest, imgptr, img_path, count):
             ABUNDANCE_LOCAL = 1
             ABUNDANCE_GLOBAL = 1
 
-        minstotarget = range(imgptr.mins)
+        if BANDS==[]:
+            nminstotarget = range(imgptr.mins)
+            BANDS = range(nminstotarget)
+        else:
+            nminstotarget = len(BANDS)
 
-        for n in minstotarget:
+        for n in nminstotarget:
             if DEBUG:
                 print(f'4<<< {n}/{imgptr.mins}')
 
+            b=BANDS[n]
             mindir = f'{n:02d}'
             productbase= format_product_base(borehole, imgptr, mindir, reducefactor)
 
             minmax_csv_file = f'{borehole}.MINERALS-META.{MINSET_ID}.csv'
-            json_file  = productbase + f'.{MINSET_ID}.json'
-            pgm_file   = productbase + f'.{MINSET_ID}.pgm'
+            json_file  = productbase + f'.{MINSET_ID}.{JSON_EXTENSION}'
+            pgm_file   = productbase + f'.{MINSET_ID}.{PGM_EXTENSION}'
             #png_file   = productbase + '.png'
             #alpng_file = productbase + '.abundance.local.png'
             #agpng_file = productbase + '.abundance.global.png'
@@ -241,19 +267,19 @@ def process_borehole_image(borehole, borehole_dest, imgptr, img_path, count):
                 append= True
                 topgmargs=['-float','-minmaxcsv']
                 product_file=os.path.join(borehole_dest,minmax_csv_file)
-                toPGM(imgptr,n,reducefactor,topgmargs,img_path, product_file, append)
+                toPGM(imgptr,b,reducefactor,topgmargs,img_path, product_file, append)
 
             if WRITEPRESENCEJSON:
                 append= False
                 topgmargs=['-onoff','-json']
                 product_file=os.path.join(dest_dir, json_file)
-                toPGM(imgptr,n,reducefactor,topgmargs,img_path, product_file, append);
+                toPGM(imgptr,b,reducefactor,topgmargs,img_path, product_file, append);
 
             if WRITEPRESENCEPGM:
                 append= False
                 topgmargs=['-onoff','-pgm']
                 product_file=os.path.join(dest_dir, json_file)
-                toPGM(imgptr,n,reducefactor,topgmargs,img_path, product_file, append);
+                toPGM(imgptr,b,reducefactor,topgmargs,img_path, product_file, append);
 
             if WRITEJSON:
                 # NOT IMPLEMENTED : TOO SPACE CONSUMING
@@ -262,20 +288,24 @@ def process_borehole_image(borehole, borehole_dest, imgptr, img_path, count):
             if WRITEPGM:
                 append= False
                 topgmargs=['-float','-pgm']
-                minbandv=0
-                maxbandv=1
-                topgmargs.append(['-databounds', str(minbandv), str(maxbandv)])
+
+                if USEABUNDANCEFILE:
+                    minv=grepKeyFloatFromFile(ABUNDANCE_REFERENCE_FILE, str(b)+',', ',', 1)
+                    maxv=grepKeyFloatFromFile(ABUNDANCE_REFERENCE_FILE, str(b)+',', ',', 2)
+                else:
+                    minv=str(ABUNDANCE_PRESET_MIN)
+                    maxv=str(ABUNDANCE_PRESET_MAX)
+                topgmargs.append(['-databounds', minv, maxv])
+
                 if len(ENHANCEFACTORS)>0:
                     for e in ENHANCEFACTORS:
                         topgmargsE=topgmargs+['-enhancement', e]
                         pgm_e_file=productbase+'.e_'+e+'.pgm'
                         product_file=os.path.join(dest_dir, pgm_e_file)
-                        toPGM(imgptr,n,reducefactor,topgmargsE,img_path, product_file, append);
+                        toPGM(imgptr,b,reducefactor,topgmargsE,img_path, product_file, append);
                 else:
                     product_file=os.path.join(dest_dir, pgm_file)
-                    toPGM(imgptr,n,reducefactor,topgmargs,img_path, product_file, append);
-        
-
+                    toPGM(imgptr,b,reducefactor,topgmargs,img_path, product_file, append);
 
 
 def process_borehole(borehole):
@@ -301,7 +331,7 @@ def process_borehole(borehole):
         imgptr = ImageHandler(borehole, img_path)
         process_borehole_image(borehole, borehole_dest, imgptr, img_path, count)
         count=count+1
-       
+
 
 def printDefaults():
     print("MINERAL_SET_TARGET:", MINERAL_SET_TARGET)
@@ -311,9 +341,10 @@ def printDefaults():
     print("REDUCEFACTORS:", REDUCEFACTORS)
     print("ENHANCEFACTORS:", ENHANCEFACTORS)
 
-def printUsage():
+def printUsage(args):
     print(f'{args[0]} [-h|-help]')
     print('         [-LOG] [-DEBUG] [-DRYRUN] [-VERBOSE]')
+    print('         [-extension ext] [-jsonextension ext] [-pgmextension ext]')
     print('         [-minmax]')
     print('         [-reducefactors n rf1 rf2 ... rfn]')
     print('         [-boreholes n b1 b2 ... bn]')
@@ -321,7 +352,6 @@ def printUsage():
     print('         [-mineralsetfilename filename]')
     print('         [-mineralsetshortid shortid]')
     print()
-    printDefaults()
 
 def processMinerals(args):
 
@@ -342,13 +372,17 @@ def processMinerals(args):
     global MINERAL_SET_TARGET
     global MINSET_ID
 
+    global JSON_EXTENSION
+    global PGM_EXTENSION
+
     i = 1
     while i < len(args):
         if args[i] == '-h' or args[i] == '-help':
-            printUsage()
+            printUsage(args)
             return
         if args[i] == '-defaults':
             printDefaults()
+            return
         elif args[i] == '-LOG':
             LOG = True
         elif args[i] == '-DEBUG':
@@ -359,6 +393,23 @@ def processMinerals(args):
             VERBOSE = True
         elif args[i] == '-minmax' or args[i] == '-minmaxcsv':
             WRITEMINMAX = True
+
+        elif args[i] == '-extension':
+            i = i + 1
+            JSON_EXTENSION = args[i]
+            PGM_EXTENSION = args[i]
+
+        elif args[i] == '-jsonextension':
+            i = i + 1
+            JSON_EXTENSION = args[i]
+
+        elif args[i] == '-pgmextension':
+            i = i + 1
+            PGM_EXTENSION = args[i]
+
+        elif args[i] == '-mineralsetfilename':
+            i = i + 1
+            MINERAL_SET_TARGET = args[i]
 
         elif args[i] == '-mineralsetfilename':
             i = i + 1
@@ -376,7 +427,7 @@ def processMinerals(args):
                 i = i + 1
                 BOREHOLES.append(args[i])
 
-        elif args[i] == '-bands':
+        elif args[i] == "-bands":
             i = i + 1
             nbands = int(args[i])
             BANDS = []
