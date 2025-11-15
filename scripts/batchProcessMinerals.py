@@ -11,7 +11,7 @@ from pathlib import Path
 # ---------------------------------------------------------------
 VERBOSE = False
 DRYRUN = False
-LOG = True
+LOG = False
 DEBUG = False
 
 # JUST MIN MAX [CSV default]
@@ -327,8 +327,9 @@ def process_borehole(borehole):
         print(f'{borehole_src}')
 
     os.chdir(borehole_src)
-    for img_path in glob.glob(f'*/*{MINERAL_SET_TARGET}.img'):
-        imgptr = ImageHandler(borehole, img_path)
+    for img_local_path in glob.glob(f'*/*{MINERAL_SET_TARGET}.img'):
+        imgptr = ImageHandler(borehole, img_local_path)
+        img_path = os.path.join(borehole_src, img_local_path)
         process_borehole_image(borehole, borehole_dest, imgptr, img_path, count)
         count=count+1
 
